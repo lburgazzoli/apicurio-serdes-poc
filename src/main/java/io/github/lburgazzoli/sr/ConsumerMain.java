@@ -9,7 +9,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import org.apache.avro.Schema;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -19,13 +18,12 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.dataformat.avro.AvroMapper;
-import com.fasterxml.jackson.dataformat.avro.AvroSchema;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.apicurio.registry.serde.SerdeConfig;
 import io.apicurio.registry.utils.IoUtil;
 import io.github.lburgazzoli.sr.model.Greeting;
-import io.github.lburgazzoli.sr.serdes.AvroDeserializer;
+import io.github.lburgazzoli.sr.serdes.JsonDeserializer;
 
 public class ConsumerMain extends Constants {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerMain.class);
@@ -41,13 +39,13 @@ public class ConsumerMain extends Constants {
         props.putIfAbsent(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
         props.putIfAbsent(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.putIfAbsent(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.putIfAbsent(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, AvroDeserializer.class.getName());
+        props.putIfAbsent(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class.getName());
         props.putIfAbsent(SerdeConfig.REGISTRY_URL, REGISTRY_URL);
 
         try (KafkaConsumer<String, byte[]> consumer = new KafkaConsumer<>(props)) {
             LOGGER.info("Subscribing to topic {}", TOPIC_NAME);
 
-            AvroMapper mapper = new AvroMapper();
+            ObjectMapper mapper = new ObjectMapper();
 
             consumer.subscribe(Collections.singletonList(TOPIC_NAME));
 
@@ -57,14 +55,10 @@ public class ConsumerMain extends Constants {
                     LOGGER.info("No messages waiting...");
                 } else {
                     records.forEach(record -> {
-                        Header header = record.headers().lastHeader(Constants.SCHEMA_HEADER);
-                        String avroSchema = IoUtil.toString(header.value());
-                        AvroSchema schema = new AvroSchema(new Schema.Parser().parse(avroSchema));
-
                         Greeting payload;
 
                         try {
-                            payload = mapper.readerFor(Greeting.class).with(schema).readValue(record.value());
+                            payload = mapper.readerFor(Greeting.class).readValue(record.value());
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }

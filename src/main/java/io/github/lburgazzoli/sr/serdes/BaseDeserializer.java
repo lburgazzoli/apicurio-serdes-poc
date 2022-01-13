@@ -1,7 +1,6 @@
 package io.github.lburgazzoli.sr.serdes;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.apache.kafka.common.header.Headers;
@@ -9,9 +8,8 @@ import org.apache.kafka.common.header.Headers;
 import io.apicurio.registry.serde.AbstractKafkaDeserializer;
 import io.apicurio.registry.serde.ParsedSchema;
 import io.apicurio.registry.serde.SchemaParser;
-import io.github.lburgazzoli.sr.Constants;
 
-public class BaseDeserializer<S> extends AbstractKafkaDeserializer<S, byte[]> {
+public abstract class BaseDeserializer<S> extends AbstractKafkaDeserializer<S, byte[]> {
     private final SchemaParser<S> parser;
 
     protected BaseDeserializer(SchemaParser<S> parser) {
@@ -35,11 +33,13 @@ public class BaseDeserializer<S> extends AbstractKafkaDeserializer<S, byte[]> {
 
     @Override
     protected byte[] readData(Headers headers, ParsedSchema<S> schema, ByteBuffer buffer, int start, int length) {
-        headers.add(Constants.SCHEMA_HEADER, schema.getParsedSchema().toString().getBytes(StandardCharsets.UTF_8));
+        configureHeaders(headers, schema);
 
         byte[] msgData = new byte[length];
         buffer.get(msgData, start, length);
 
         return msgData;
     }
+
+    protected abstract void configureHeaders(Headers headers, ParsedSchema<S> schema);
 }

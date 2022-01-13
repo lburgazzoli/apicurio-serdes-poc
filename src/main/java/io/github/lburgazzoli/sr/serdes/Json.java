@@ -1,5 +1,12 @@
 package io.github.lburgazzoli.sr.serdes;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.victools.jsonschema.generator.OptionPreset;
+import com.github.victools.jsonschema.generator.SchemaGenerator;
+import com.github.victools.jsonschema.generator.SchemaGeneratorConfig;
+import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
+import com.github.victools.jsonschema.generator.SchemaVersion;
+import com.google.gson.annotations.SerializedName;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
@@ -23,6 +30,29 @@ public final class Json {
         }
     };
 
+    public static SchemaGenerator SCHEMA_GENERATOR = schemaGenerator();
+
     private Json() {
+    }
+
+    public static SchemaGenerator schemaGenerator() {
+        SchemaGeneratorConfigBuilder configBuilder = new SchemaGeneratorConfigBuilder(
+            new ObjectMapper(),
+            SchemaVersion.DRAFT_7,
+            OptionPreset.PLAIN_JSON);
+
+        configBuilder.forFields()
+            .withPropertyNameOverrideResolver(field -> {
+                SerializedName sn = field.getAnnotationConsideringFieldAndGetter(SerializedName.class);
+                if (sn != null) {
+                    return sn.value();
+                }
+
+                return null;
+            });
+
+        SchemaGeneratorConfig config = configBuilder.build();
+
+        return new SchemaGenerator(config);
     }
 }

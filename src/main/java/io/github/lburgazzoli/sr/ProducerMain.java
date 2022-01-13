@@ -6,7 +6,6 @@ import java.sql.Date;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.avro.Schema;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -14,12 +13,12 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.dataformat.avro.AvroMapper;
-import com.fasterxml.jackson.dataformat.avro.AvroSchema;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.apicurio.registry.serde.SerdeConfig;
 import io.github.lburgazzoli.sr.model.Greeting;
-import io.github.lburgazzoli.sr.serdes.AvroSerializer;
+import io.github.lburgazzoli.sr.serdes.Json;
+import io.github.lburgazzoli.sr.serdes.JsonSerializer;
 
 public class ProducerMain extends Constants {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProducerMain.class);
@@ -33,14 +32,13 @@ public class ProducerMain extends Constants {
         props.putIfAbsent(ProducerConfig.CLIENT_ID_CONFIG, "p-" + TOPIC_NAME);
         props.putIfAbsent(ProducerConfig.ACKS_CONFIG, "all");
         props.putIfAbsent(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        props.putIfAbsent(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, AvroSerializer.class.getName());
+        props.putIfAbsent(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class.getName());
         props.putIfAbsent(SerdeConfig.REGISTRY_URL, REGISTRY_URL);
         props.putIfAbsent(SerdeConfig.AUTO_REGISTER_ARTIFACT, Boolean.TRUE);
 
         try (KafkaProducer<String, byte[]> producer = new KafkaProducer<>(props)) {
-            AvroMapper mapper = new AvroMapper();
-            String schema = mapper.schemaFor(Greeting.class).getAvroSchema().toString(true);
-            AvroSchema avroSchema = new AvroSchema(new Schema.Parser().parse(schema));
+            ObjectMapper mapper = new ObjectMapper();
+            String schema = Json.SCHEMA_GENERATOR.generateSchema(Greeting.class).toString();
 
             LOGGER.info("Publish to topic {}", TOPIC_NAME);
             LOGGER.info("Computed schema: {}", schema);
@@ -55,7 +53,7 @@ public class ProducerMain extends Constants {
                 ProducerRecord<String, byte[]> producedRecord = new ProducerRecord<>(
                     TOPIC_NAME,
                     "foo",
-                    mapper.writer().with(avroSchema).writeValueAsBytes(payload));
+                    mapper.writer().writeValueAsBytes(payload));
 
                 producedRecord.headers().add(Constants.SCHEMA_HEADER, schema.getBytes(StandardCharsets.UTF_8));
                 producer.send(producedRecord);
