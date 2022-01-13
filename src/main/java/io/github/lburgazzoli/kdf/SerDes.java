@@ -65,7 +65,7 @@ public class SerDes {
                 avroHeaders.addEncodingHeader(headers, AvroEncoding.BINARY.name());
             }
 
-            serializeData(schema, data, out);
+            out.write(data);
         }
 
         @Override
