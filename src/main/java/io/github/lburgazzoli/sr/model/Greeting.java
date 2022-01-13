@@ -1,4 +1,4 @@
-package io.github.lburgazzoli.kdf.model;
+package io.github.lburgazzoli.sr.model;
 
 public class Greeting {
     private String message;

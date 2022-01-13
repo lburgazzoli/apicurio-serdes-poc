@@ -1,4 +1,4 @@
-package io.github.lburgazzoli.kdf;
+package io.github.lburgazzoli.sr;
 
 
 import java.io.IOException;
@@ -24,9 +24,10 @@ import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 
 import io.apicurio.registry.serde.SerdeConfig;
 import io.apicurio.registry.utils.IoUtil;
-import io.github.lburgazzoli.kdf.model.Greeting;
+import io.github.lburgazzoli.sr.model.Greeting;
+import io.github.lburgazzoli.sr.serdes.AvroDeserializer;
 
-public class ConsumerMain extends SerDes {
+public class ConsumerMain extends Constants {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerMain.class);
 
     public static void main(String [] args) throws Exception {
@@ -40,7 +41,7 @@ public class ConsumerMain extends SerDes {
         props.putIfAbsent(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
         props.putIfAbsent(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.putIfAbsent(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.putIfAbsent(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SerDes.AvroDeserializer.class.getName());
+        props.putIfAbsent(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, AvroDeserializer.class.getName());
         props.putIfAbsent(SerdeConfig.REGISTRY_URL, REGISTRY_URL);
 
         try (KafkaConsumer<String, byte[]> consumer = new KafkaConsumer<>(props)) {
@@ -56,7 +57,7 @@ public class ConsumerMain extends SerDes {
                     LOGGER.info("No messages waiting...");
                 } else {
                     records.forEach(record -> {
-                        Header header = record.headers().lastHeader(SerDes.SCHEMA_HEADER);
+                        Header header = record.headers().lastHeader(Constants.SCHEMA_HEADER);
                         String avroSchema = IoUtil.toString(header.value());
                         AvroSchema schema = new AvroSchema(new Schema.Parser().parse(avroSchema));
 

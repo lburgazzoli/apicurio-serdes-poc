@@ -1,4 +1,4 @@
-package io.github.lburgazzoli.kdf;
+package io.github.lburgazzoli.sr;
 
 
 import java.nio.charset.StandardCharsets;
@@ -18,9 +18,10 @@ import com.fasterxml.jackson.dataformat.avro.AvroMapper;
 import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 
 import io.apicurio.registry.serde.SerdeConfig;
-import io.github.lburgazzoli.kdf.model.Greeting;
+import io.github.lburgazzoli.sr.model.Greeting;
+import io.github.lburgazzoli.sr.serdes.AvroSerializer;
 
-public class ProducerMain extends SerDes {
+public class ProducerMain extends Constants {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProducerMain.class);
 
     public static void main(String [] args) throws Exception {
@@ -32,7 +33,7 @@ public class ProducerMain extends SerDes {
         props.putIfAbsent(ProducerConfig.CLIENT_ID_CONFIG, "p-" + TOPIC_NAME);
         props.putIfAbsent(ProducerConfig.ACKS_CONFIG, "all");
         props.putIfAbsent(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        props.putIfAbsent(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SerDes.AvroSerializer.class.getName());
+        props.putIfAbsent(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, AvroSerializer.class.getName());
         props.putIfAbsent(SerdeConfig.REGISTRY_URL, REGISTRY_URL);
         props.putIfAbsent(SerdeConfig.AUTO_REGISTER_ARTIFACT, Boolean.TRUE);
 
@@ -56,7 +57,7 @@ public class ProducerMain extends SerDes {
                     "foo",
                     mapper.writer().with(avroSchema).writeValueAsBytes(payload));
 
-                producedRecord.headers().add(SerDes.SCHEMA_HEADER, schema.getBytes(StandardCharsets.UTF_8));
+                producedRecord.headers().add(Constants.SCHEMA_HEADER, schema.getBytes(StandardCharsets.UTF_8));
                 producer.send(producedRecord);
 
                 Thread.sleep(1000);
