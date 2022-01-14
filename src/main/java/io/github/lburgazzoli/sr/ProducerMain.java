@@ -13,12 +13,12 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.avro.AvroMapper;
+import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 
 import io.apicurio.registry.serde.SerdeConfig;
 import io.github.lburgazzoli.sr.model.Greeting;
-import io.github.lburgazzoli.sr.serdes.Json;
-import io.github.lburgazzoli.sr.serdes.JsonSerializer;
+import io.github.lburgazzoli.sr.serdes.AvroSerializer;
 
 public class ProducerMain extends Constants {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProducerMain.class);
@@ -32,13 +32,13 @@ public class ProducerMain extends Constants {
         props.putIfAbsent(ProducerConfig.CLIENT_ID_CONFIG, "p-" + TOPIC_NAME);
         props.putIfAbsent(ProducerConfig.ACKS_CONFIG, "all");
         props.putIfAbsent(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        props.putIfAbsent(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class.getName());
+        props.putIfAbsent(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, AvroSerializer.class.getName());
         props.putIfAbsent(SerdeConfig.REGISTRY_URL, REGISTRY_URL);
         props.putIfAbsent(SerdeConfig.AUTO_REGISTER_ARTIFACT, Boolean.TRUE);
 
         try (KafkaProducer<String, byte[]> producer = new KafkaProducer<>(props)) {
-            ObjectMapper mapper = new ObjectMapper();
-            String schema = Json.SCHEMA_GENERATOR.generateSchema(Greeting.class).toString();
+            AvroMapper mapper = new AvroMapper();
+            AvroSchema schema = mapper.schemaFor(Greeting.class);
 
             LOGGER.info("Publish to topic {}", TOPIC_NAME);
             LOGGER.info("Computed schema: {}", schema);
@@ -53,9 +53,9 @@ public class ProducerMain extends Constants {
                 ProducerRecord<String, byte[]> producedRecord = new ProducerRecord<>(
                     TOPIC_NAME,
                     "foo",
-                    mapper.writer().writeValueAsBytes(payload));
+                    mapper.writer().with(schema).writeValueAsBytes(payload));
 
-                producedRecord.headers().add(Constants.SCHEMA_HEADER, schema.getBytes(StandardCharsets.UTF_8));
+                producedRecord.headers().add(Constants.SCHEMA_HEADER, schema.getAvroSchema().toString().getBytes(StandardCharsets.UTF_8));
                 producer.send(producedRecord);
 
                 Thread.sleep(1000);

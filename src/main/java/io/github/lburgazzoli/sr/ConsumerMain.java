@@ -18,12 +18,13 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.avro.AvroMapper;
+import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 
 import io.apicurio.registry.serde.SerdeConfig;
 import io.apicurio.registry.utils.IoUtil;
 import io.github.lburgazzoli.sr.model.Greeting;
-import io.github.lburgazzoli.sr.serdes.JsonDeserializer;
+import io.github.lburgazzoli.sr.serdes.AvroDeserializer;
 
 public class ConsumerMain extends Constants {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerMain.class);
@@ -39,13 +40,13 @@ public class ConsumerMain extends Constants {
         props.putIfAbsent(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
         props.putIfAbsent(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.putIfAbsent(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.putIfAbsent(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class.getName());
+        props.putIfAbsent(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, AvroDeserializer.class.getName());
         props.putIfAbsent(SerdeConfig.REGISTRY_URL, REGISTRY_URL);
 
         try (KafkaConsumer<String, byte[]> consumer = new KafkaConsumer<>(props)) {
             LOGGER.info("Subscribing to topic {}", TOPIC_NAME);
 
-            ObjectMapper mapper = new ObjectMapper();
+            AvroMapper mapper = new AvroMapper();
 
             consumer.subscribe(Collections.singletonList(TOPIC_NAME));
 
@@ -55,10 +56,14 @@ public class ConsumerMain extends Constants {
                     LOGGER.info("No messages waiting...");
                 } else {
                     records.forEach(record -> {
+
                         Greeting payload;
 
                         try {
-                            payload = mapper.readerFor(Greeting.class).readValue(record.value());
+                            byte[] rawSchema = record.headers().lastHeader(Constants.SCHEMA_HEADER).value();
+                            AvroSchema schema = mapper.schemaFrom(IoUtil.toStream(rawSchema));
+
+                            payload = mapper.readerFor(Greeting.class).with(schema).readValue(record.value());
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }

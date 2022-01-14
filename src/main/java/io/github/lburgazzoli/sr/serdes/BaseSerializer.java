@@ -9,12 +9,15 @@ import org.apache.kafka.common.header.Headers;
 import io.apicurio.registry.serde.AbstractKafkaSerializer;
 import io.apicurio.registry.serde.ParsedSchema;
 import io.apicurio.registry.serde.SchemaParser;
+import io.apicurio.registry.serde.SchemaResolver;
 import io.github.lburgazzoli.sr.Constants;
 
 public abstract class BaseSerializer<S> extends AbstractKafkaSerializer<S, byte[]> {
     private final SchemaParser<S> parser;
 
-    public BaseSerializer(SchemaParser<S> parser) {
+    protected BaseSerializer(SchemaParser<S> parser, SchemaResolver<S, byte[]> resolver) {
+        super(resolver);
+
         this.parser = parser;
     }
 
